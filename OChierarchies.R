@@ -1,5 +1,11 @@
 # OC data: creating spatial hierarchy for Eric Kansa April 2023
 
+# This script explores
+# 1. VOronyi approach
+# 2. Buffers approach
+# 3. Select by distance approach
+# 4. might look at neighborhood approach?
+
 # merge units with sites and generate a column that lists either the site TRAP id, or a nonsite_1, nonsite_2. You can use Voronyi polygons too. 
 
 library(sf)
@@ -136,8 +142,31 @@ list_sitebuf <- kaz_sitebuf %>%
   arrange(desc(n))
 
 print(list_sitebuf, n=72)
+
+
 ################### Nearest polygons
 
 nearest <- st_nearest_feature(kaz_sites,st_centroid(kaz_35))
 
-st_distance(kaz_sites, vor_units)
+# distance-based k neighbors (no need to touch)
+library(spdep)
+nearest50 <- knn2nb(knearneigh(st_centroid(kaz_35), k = 50))
+nearest_to_site <- st_nearest_feature(kaz_sites, kaz_35)
+
+# subsetting a list of indeces (not entirely successful)
+nb <- nearest50[nearest_to_site] # clearly there's overlap
+
+# lets see how many unique unit indeces are there
+units <- unique(unlist(nb))
+
+# select the unit polygons by index number
+near50polygons <- kaz_35[units,]
+
+# plot the 50 nearest polygons for all sites (minus duplicates)
+plot(kaz_sites$geometry);plot(near50polygons$geometry, add=T)
+
+mapview(kaz_sites)+mapview(near50polygons)
+
+#### I need to select the 50 nearest polys within the Voronyi polygons?
+# then there will be less overlap
+# but it will be an artificial division
